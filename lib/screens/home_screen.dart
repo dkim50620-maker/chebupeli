@@ -10,32 +10,36 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _counter = 0;
+  bool _isLoading = true; // чтобы не показывать 0 пока не загрузили
 
   @override
   void initState() {
     super.initState();
-    _loadCounter(); // загружаем сохранённое значение
+    _loadCounter();
   }
 
   /// Загружаем значение счётчика из SharedPreferences
   Future<void> _loadCounter() async {
     final prefs = await SharedPreferences.getInstance();
+    final savedCounter = prefs.getInt('counter') ?? 0;
     setState(() {
-      _counter = prefs.getInt('counter') ?? 0; // если нет — 0
+      _counter = savedCounter;
+      _isLoading = false;
     });
   }
 
-  /// Сохраняем текущее значение счётчика
-  Future<void> _saveCounter() async {
+  /// Сохраняем значение счётчика
+  Future<void> _saveCounter(int value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('counter', _counter);
+    await prefs.setInt('counter', value);
   }
 
-  void _incrementCounter() {
+  void _incrementCounter() async {
+    final newValue = _counter + 1;
     setState(() {
-      _counter++;
+      _counter = newValue;
     });
-    _saveCounter(); // сохраняем после каждого нажатия
+    await _saveCounter(newValue); // сохраняем после обновления
   }
 
   void _resetCounter() async {
@@ -54,27 +58,29 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Сбросить',
+            tooltip: 'Сбросить счётчик',
             onPressed: _resetCounter,
           ),
         ],
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Вы нажали кнопку столько раз:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Значение сохраняется даже после перезапуска приложения!',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+        child: _isLoading
+            ? const CircularProgressIndicator() // пока загружаем
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Вы нажали кнопку столько раз:'),
+                  Text(
+                    '$_counter',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Значение сохраняется даже после перезапуска приложения!',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
